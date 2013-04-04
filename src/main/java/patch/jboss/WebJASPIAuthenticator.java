@@ -120,9 +120,9 @@ public class WebJASPIAuthenticator extends AuthenticatorBase {
 
         // the authentication process has been a success. We need to register the principal, username, password and roles
         // with the container
-        if (result) {
+        CallerPrincipalCallback cpc = cbh.getCallerPrincipalCallback();
+        if (result && cpc != null) {
             PasswordValidationCallback pvc = cbh.getPasswordValidationCallback();
-            CallerPrincipalCallback cpc = cbh.getCallerPrincipalCallback();
             GroupPrincipalCallback gpc = cbh.getGroupPrincipalCallback();
 
             // get the client principal from the callback.
