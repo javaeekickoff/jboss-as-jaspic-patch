@@ -50,6 +50,7 @@ import org.jboss.as.web.security.JBossWebRealm;
 import org.jboss.as.web.security.jaspi.WebJASPICallbackHandler;
 import org.jboss.security.SecurityContext;
 import org.jboss.security.ServerAuthenticationManager;
+import org.jboss.security.SimpleGroup;
 import org.jboss.security.SimplePrincipal;
 import org.jboss.security.auth.callback.JBossCallbackHandler;
 import org.jboss.security.auth.message.GenericMessageInfo;
@@ -335,9 +336,29 @@ public class WebJASPIAuthenticator extends AuthenticatorBase {
         Set<String> descriptorRoles = realm.getPrincipalVersusRolesMap().get(principal.getName());
         if (roles.isEmpty() && descriptorRoles != null)
             roles.addAll(descriptorRoles);
+        
+        // Populate the subject. Tomcat/JBossWeb will use the JBossGenericPrincipal and it's caller principal and roles,
+        // but org.jboss.as.web.security.SecurityContextAssociationValve uses the Subject to populate a SubjectInfo, which
+        // is set in the securityContext and picked up by e.g. org.jboss.as.security.service.SimpleSecurityManager for use
+        // in EJB.
+        Subject authenticatedSubject = new Subject();
+        
+        // Add the caller principal to the Subject
+        Group callerPrincipalGroup = new SimpleGroup("CallerPrincipal");
+        callerPrincipalGroup.addMember(principal);
+        authenticatedSubject.getPrincipals().add(callerPrincipalGroup);
+        
+        // Add the roles to the Subject
+        if (!roles.isEmpty()) {
+	        Group rolesGroup = new SimpleGroup("Roles");
+	        for (String role : roles) {
+	        	rolesGroup.addMember(new SimplePrincipal(role));
+	        }
+	        authenticatedSubject.getPrincipals().add(rolesGroup);
+        }
 
         // build and return the JBossGenericPrincipal.
-        return new JBossGenericPrincipal(realm, principal.getName(), null, roles, principal, null, null, null, subject);
+        return new JBossGenericPrincipal(realm, principal.getName(), null, roles, principal, null, null, null, authenticatedSubject);
 
     }
 
