@@ -252,6 +252,24 @@ public class WebJASPIAuthenticator extends AuthenticatorBase {
         // cache the authentication information in our request
         request.setAuthType(authType);
         request.setUserPrincipal(principal);
+        
+        
+        // Associate Subject with SecurityContext. See https://issues.jboss.org/browse/SECURITY-745
+    	
+    	if (principal instanceof JBossGenericPrincipal) { // should always be true when called from authenticate()
+    		
+    		SecurityContext context = SecurityActions.getSecurityContext();
+        	if (context == null) {
+        		throw new IllegalStateException("Security context is null");
+        	}
+    		
+    		JBossGenericPrincipal jbossGenericPrincipal = (JBossGenericPrincipal) principal;
+        	context.getUtil().createSubjectInfo(new SimplePrincipal(
+        		jbossGenericPrincipal.getName()), 
+        		jbossGenericPrincipal.getCredentials(),
+        		jbossGenericPrincipal.getSubject()
+        	);
+    	}
 
         Session session = request.getSessionInternal(false);
         // cache the authentication information in our session, if any
